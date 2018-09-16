@@ -1,89 +1,62 @@
-<html>
+<!DOCTYPE html>
+<html lang="ja">
     <head>
-        <title>wgld.org WebGL sample</title>
-        <script src="script.js" type="text/javascript"></script>
-        <script src="minMatrixb.js" type="text/javascript"></script>
-        
+		<meta charset="UTF-8">
+        <title>Mode Viewer</title>
+        <script src="js/script.js" type="text/javascript"></script>
+        <script src="js/minMatrixb.js" type="text/javascript"></script>
+
         <script id="vs" type="x-shader/x-vertex">
-			attribute vec3 position;
-			attribute vec3 disp1;
-			attribute vec3 disp2;
-			attribute vec3 frc1;
-			attribute vec3 frc2;
-			//attribute vec3 normal;
-			//attribute vec2 textureCoord;
-			//attribute vec4 color;
-			uniform vec4 color;
-			uniform   mat4 mvpMatrix;
-			uniform float r1;
-			uniform float r2;
-			uniform float disp_amp;
-			uniform float force_range;
-			//uniform   mat4 invMatrix;
-			//uniform   vec3 lightDirection;
-			//uniform   vec3 eyeDirection;
-			//uniform   vec4 ambientColor;
-			varying   vec4 vColor;
-			//varying   vec2 vTextureCoord;
-			
+			attribute vec3  position;
+			attribute vec3  mode_amp;
+			attribute vec3  cmode_amp;
+			attribute vec3  cmode_phase;
+			uniform   vec4  color;
+			uniform   mat4  mvpMatrix;
+			uniform   float phase;
+			uniform   float amp;
+			uniform   int mode_type;
+			varying   vec4  vColor;
 			void main(void){
-				//vec3  invLight = normalize(invMatrix * vec4(lightDirection, 0.0)).xyz;
-				//vec3  invEye   = normalize(invMatrix * vec4(eyeDirection, 0.0)).xyz;
-				//vec3  halfLE   = normalize(invLight + invEye);
-				//float diffuse  = clamp(dot(normal, invLight), 0.0, 1.0);
-				//float specular = pow(clamp(dot(normal, halfLE), 0.0, 1.0), 50.0);
-				//vec4  light    = color * vec4(vec3(diffuse), 1.0) + vec4(vec3(specular), 1.0) * 0.3;
-				//vec4  light    = color * vec4(vec3(diffuse), 1.0) * 0.8;
-				//vColor         = light + ambientColor;
-				//vColor	       = color;
-				//float f_range = 1.0;
-				float frc = frc1.x * r1 + frc2.x * r2;
-				float n_frc = - frc / force_range;
-				if (n_frc < -0.5) {
-					vColor = vec4(0.0, 2.0 * (n_frc + 1.0), 1.0, 1.0);
-				} else if (n_frc < 0.0) {
-					vColor = vec4(0.0, 1.0, -2.0 * n_frc, 1.0);
-				} else if (n_frc < 0.5) {
-					vColor = vec4(2.0 * n_frc, 1.0, 0.0, 1.0);
-				} else {
-					vColor = vec4(1.0, -2.0 * (n_frc -1.0), 0.0, 1.0);
+				vColor = color;
+				vec3 modeShape;
+				if (mode_type == 0) {
+					modeShape = position + mode_amp * amp * sin(phase);
+				} else if (mode_type == 1) {
+					modeShape = position + cmode_amp * amp * sin(phase + cmode_phase);
 				}
-				//vColor = color * (frc1.x * r1 + frc2.x * r2) *0.001;
-				//vTextureCoord  = textureCoord;
-				vec3 dispShape = position + disp1 * r1 * disp_amp + disp2 * r2 * disp_amp;
-				gl_Position    = mvpMatrix * vec4(dispShape, 1.0);
-				//gl_Position    = mvpMatrix * vec4(disp1, 1.0);
+				gl_Position    = mvpMatrix * vec4(modeShape, 1.0);
 			}
         </script>
-        
         <script id="fs" type="x-shader/x-fragment">
 			precision mediump float;
-			
-			//uniform sampler2D texture;
 			varying vec4      vColor;
-			//varying vec2      vTextureCoord;
-			
 			void main(void){
-				//vec4 smpColor = texture2D(texture, vTextureCoord);
 				gl_FragColor = vColor;
-				//gl_FragColor  = vColor * smpColor;
-				//gl_FragColor  = smpColor;
 			}
         </script>
+		<link href="https://fonts.googleapis.com/css?family=Paytone+One|Source+Sans+Pro|Pattaya|Lakki+Reddy:300,700,400,400" rel="stylesheet">
+		<link rel="stylesheet" href="style.css">
     </head>
     <body>
-        <canvas id="canvas"></canvas>
-        	<p>
-			<input id="rot" type="range" min="0" max="360" value="0"> Rotation
-		</p>
-		<p>
-			<input id="disp_amp" type="range" min="0" max="3000" value="1000"> Deformation Amplitude
-		</p>
-		<p>
-			<input id="force_range" type="range" min="0.1" max="20" value="1"> Force Range
-		</p>
-		<p>
-			<input id="speed" type="range" min="0" max="10" value="2"> Speed
-		</p>
+		<div class="site">
+			<a href="#">Mode Viewer</a>
+		</div>
+
+		<span class="hbar"></span>
+		<canvas id="canvas" class="webgl" width="900" height="540"></canvas>
+		<div class="news">
+			<h2>使い方</h2>
+			<ul>
+				<li>マウスをドラッグすると、橋を回転させられます。</li>
+				<li>「n」キーで実固有振動モードを表示します。</li>
+				<li>「f」キーでフラッター時の複素固有振動モードを表示します。</li>
+				</ul>
+			</div>
+		
+		<div class="copyright">
+			<p>Copyright &copy; Taku Hanai</p>
+		</div>
+		<div class="debugger" id="text"> </div>
     </body>
 </html>
