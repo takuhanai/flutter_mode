@@ -8,6 +8,16 @@ window.onload = function(){
 	let phase = 0.0;
 	let mode_type = 0;
 	
+	let ftn13_read = false;
+	let ftn82_read = false;
+	let ftn83_read = false;
+	
+	let coord = new Array();
+	let index = new Array();
+	let mode = new Array();
+	let cmode_r = new Array();
+	let cmode_i = new Array();
+	
 	let mousePressed = false;
 	let prevMouseLocation;
 	let currentMouseLocation;
@@ -17,7 +27,7 @@ window.onload = function(){
 	let prevTouchLocations;
 	let currentTouchLocations;
 	
-	let allDataReady = true;
+	let allDataReady = false;
 	
 	let cameraVertAngle = 0.0;
 	const cameraVertAngleMax = 0.0 * Math.PI / 180.0;
@@ -54,8 +64,8 @@ window.onload = function(){
     let attLocation = new Array();
     attLocation[0] = gl.getAttribLocation(prg, 'position');
 	attLocation[1] = gl.getAttribLocation(prg, 'mode_amp');
-    attLocation[2] = gl.getAttribLocation(prg, 'cmode_amp');
-	attLocation[3] = gl.getAttribLocation(prg, 'cmode_phase');
+    attLocation[2] = gl.getAttribLocation(prg, 'cmode_r');
+	attLocation[3] = gl.getAttribLocation(prg, 'cmode_i');
 	console.log(attLocation);
     let attStride = new Array();
     attStride[0] = 3;
@@ -103,7 +113,7 @@ window.onload = function(){
 	let freqs = [];
 	let mode_id = 11;
 	
-	let coord = readFlutterData();
+	readFlutterData();
 	//console.log(coord);
 	
 	window.addEventListener('keyup', keyUp, false);
@@ -123,7 +133,15 @@ window.onload = function(){
 	render();
 	
     function render(){
-		phase += freqs[mode_id] / 60.0 * 2.0 * Math.PI;
+		//console.log(ftn13_read, ftn82_read, ftn83_read);
+		if (ftn13_read && ftn82_read && ftn83_read && !allDataReady) {
+			console.log(coord.length, mode.length, cmode_r.length, cmode_i.length);
+			allDataReady = true;
+			VBOList = [create_vbo(coord), create_vbo(mode), create_vbo(cmode_r), create_vbo(cmode_i)];
+			
+			iIndex = create_ibo(index);
+		}
+		//phase += freqs[mode_id] / 60.0 * 2.0 * Math.PI;
 		gl.clearColor(0.0, 0.0, 0.0, 1.0);
 		gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 		// アニメーション
@@ -131,6 +149,7 @@ window.onload = function(){
 
         if (allDataReady === true) {
 			// 全てのリソースのロードが完了している
+			phase += freqs[mode_id] / 60.0 * 2.0 * Math.PI;
 			
 			//drawUpdate();
 			
@@ -156,12 +175,12 @@ window.onload = function(){
 			
         }else{
             // canvasを初期化
-            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+            //gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
             // リソースのロードが完了していない
             // プログレス表示
-            m.multiply(p1Matrix, vMatrix, vpMatrix);
-            progressRender();
+            //m.multiply(p1Matrix, vMatrix, vpMatrix);
+            //progressRender();
         }
 
         gl.flush();
@@ -462,100 +481,131 @@ window.onload = function(){
 	}
 	
 	function readFlutterData() {
-		let coord = new Array(); // sequential coordinate data
-		let index = new Array();
-		let mode = new Array();
-		let cmode_amp = new Array();
-		let cmode_phase = new Array();
+		
 		let Vert = function () {
 			this.id;
 		}
 		let verts = new Array(); // coordinate of each vertex
+		
 		let ftn13 = new XMLHttpRequest();
-		ftn13.open("GET", './resource/ftn13', false); //true:非同期,false:同期
+		ftn13.open("GET", './resource/ftn13', true); //true:非同期,false:同期
 		ftn13.responseType = 'arraybuffer';
 		ftn13.send(null);
 		
-		let arrayBuffer = ftn13.response;
-		let dv13 = new DataView(arrayBuffer);
-		let off = 0;
-		num_vert = dv13.getInt32(off + 8, true);
-		console.log(num_vert);
-		off += 60;
-		for (let i = 0; i < num_vert; i++) {
-			let v = new Vert();
-			v.id = i;
-			coord.push(dv13.getFloat64(off + 4, true));
-			coord.push(dv13.getFloat64(off + 12, true));
-			coord.push(dv13.getFloat64(off + 20, true));
-			verts[dv13.getInt32(off, true)] = v;
-			off += 88;
-		}
-		let num_memb = dv13.getInt32(off + 4, true);
-		console.log(num_memb);
-		off += 16
-		num_loop = 0;
-		for (let i = 0; i < num_memb; i++) {
-			let elm = dv13.getInt32(off, true);
-			if (elm < 1600 || elm > 1999) { // remove suspender ropes (kitabisan)
-				index.push(verts[dv13.getInt32(off + 8, true)].id);
-				index.push(verts[dv13.getInt32(off + 12, true)].id);
-				num_loop += 2;
+		ftn13.onload = function(e) {
+			let arrayBuffer = ftn13.response;
+			let dv13 = new DataView(arrayBuffer);
+			let off = 0;
+			num_vert = dv13.getInt32(off + 8, true);
+			console.log(num_vert);
+			off += 60;
+			for (let i = 0; i < num_vert; i++) {
+				let v = new Vert();
+				v.id = i;
+				coord.push(dv13.getFloat64(off + 4, true));
+				coord.push(dv13.getFloat64(off + 12, true));
+				coord.push(dv13.getFloat64(off + 20, true));
+				verts[dv13.getInt32(off, true)] = v;
+				off += 88;
 			}
-			off += 28;
-		}
-		
-		num_mode = dv13.getInt32(off + 8, true);
-		off += 60;
-		
-		for (let i = 0; i < num_mode; i++) {
-			freqs.push(dv13.getFloat64(off + 4, true));
-			off += 84;
-			for (let ii = 0; ii < num_vert; ii++) {
-				mode.push(dv13.getFloat64(off + 4, true));
-				mode.push(dv13.getFloat64(off + 12, true));
-				mode.push(dv13.getFloat64(off + 20, true));
-				off += 60;
+			let num_memb = dv13.getInt32(off + 4, true);
+			console.log(num_memb);
+			off += 16
+			num_loop = 0;
+			for (let i = 0; i < num_memb; i++) {
+				let elm = dv13.getInt32(off, true);
+				if (elm < 1600 || elm > 1999) { // remove suspender ropes (kitabisan)
+					index.push(verts[dv13.getInt32(off + 8, true)].id);
+					index.push(verts[dv13.getInt32(off + 12, true)].id);
+					num_loop += 2;
+				}
+				off += 28;
 			}
+			
+			num_mode = dv13.getInt32(off + 8, true);
+			off += 60;
+			
+			for (let i = 0; i < num_mode; i++) {
+				freqs.push(dv13.getFloat64(off + 4, true));
+				off += 84;
+				for (let ii = 0; ii < num_vert; ii++) {
+					mode.push(dv13.getFloat64(off + 4, true));
+					mode.push(dv13.getFloat64(off + 12, true));
+					mode.push(dv13.getFloat64(off + 20, true));
+					off += 60;
+				}
+			}
+			ftn13_read = true;
+			//VBOList.push(create_vbo(coord), create_vbo(mode));
+			//iIndex = create_ibo(index);
 		}
 		
 		let ftn82 = new XMLHttpRequest();
-		ftn82.open("GET", './resource/ftn82', false);
+		ftn82.open("GET", './resource/ftn82', true);
 		ftn82.responseType = 'arraybuffer';
 		ftn82.send(null);
-		let dv82 = new DataView(ftn82.response);
+		
+		ftn82.onload = function(e) {
+			let arrayBuffer = ftn82.response;
+			let dv82 = new DataView(arrayBuffer);
+			
+			//let off = 60 + 84 * num_vert + 16 + 28 * num_memb + 60;
+			let off = 0;
+			let n_v = dv82.getInt32(off + 8, true);
+			off += 60 + 84 * n_v;
+			let n_m = dv82.getInt32(off + 4, true);
+			off += 16 + 28 * n_m;
+			let n_mo = dv82.getInt32(off + 8, true);
+			off += 60;
+			
+			for (let i = 0; i < n_mo; i++) {
+				off += 76;
+				for (let ii = 0; ii < n_v; ii++) {
+					cmode_r.push(dv82.getFloat64(off + 4, true));
+					cmode_r.push(dv82.getFloat64(off + 12, true));
+					cmode_r.push(dv82.getFloat64(off + 20, true));
+					off += 60;
+				}
+			}
+			ftn82_read = true;
+			//VBOList.push(create_vbo(cmode_r));
+		}
 		
 		let ftn83 = new XMLHttpRequest();
-		ftn83.open("GET", './resource/ftn83', false);
+		ftn83.open("GET", './resource/ftn83', true);
 		ftn83.responseType = 'arraybuffer';
 		ftn83.send(null);
-		let dv83 = new DataView(ftn83.response);
 		
-		off = 60 + 84 * num_vert + 16 + 28 * num_memb + 60;
-		
-		for (let i = 0; i < num_mode; i++) {
-			off += 76;
-			for (let ii = 0; ii < num_vert; ii++) {
-				let x_r = dv82.getFloat64(off + 4, true);
-				let y_r = dv82.getFloat64(off + 12, true);
-				let z_r = dv82.getFloat64(off + 20, true);
-				let x_i = dv83.getFloat64(off + 4, true);
-				let y_i = dv83.getFloat64(off + 12, true);
-				let z_i = dv83.getFloat64(off + 20, true);
-				cmode_amp.push(Math.sqrt(x_r * x_r + x_i * x_i));
-				cmode_phase.push(Math.atan2(x_r, x_i));
-				cmode_amp.push(Math.sqrt(y_r * y_r + y_i * y_i));
-				cmode_phase.push(Math.atan2(y_r, y_i));
-				cmode_amp.push(Math.sqrt(z_r * z_r + z_i * z_i));
-				cmode_phase.push(Math.atan2(z_r, z_i));
-				off += 60;
+		ftn83.onload = function(e) {
+			let arrayBuffer = ftn83.response;
+			let dv83 = new DataView(arrayBuffer);
+			
+			//let off = 60 + 84 * num_vert + 16 + 28 * num_memb + 60;
+			let off = 0;
+			let n_v = dv83.getInt32(off + 8, true);
+			off += 60 + 84 * n_v;
+			let n_m = dv83.getInt32(off + 4, true);
+			off += 16 + 28 * n_m;
+			let n_mo = dv83.getInt32(off + 8, true);
+			off += 60;
+			
+			for (let i = 0; i < n_mo; i++) {
+				off += 76;
+				for (let ii = 0; ii < n_v; ii++) {
+					cmode_i.push(dv83.getFloat64(off + 4, true));
+					cmode_i.push(dv83.getFloat64(off + 12, true));
+					cmode_i.push(dv83.getFloat64(off + 20, true));
+					off += 60;
+				}
 			}
+			ftn83_read = true;
+			//VBOList.push(create_vbo(cmode_i));
 		}
-		console.log(mode.length, cmode_amp.length, cmode_phase.length);
+		//console.log(mode.length, cmode_r.length, cmode_i.length);
 		
-		VBOList = [create_vbo(coord), create_vbo(mode), create_vbo(cmode_amp), create_vbo(cmode_phase)];
+		//VBOList = [create_vbo(coord), create_vbo(mode), create_vbo(cmode_r), create_vbo(cmode_i)];
 		
-		iIndex = create_ibo(index);
+		//iIndex = create_ibo(index);
 	}
 
 	function readObjectData_old(filePath) { //csvﾌｧｲﾙﾉ相対ﾊﾟｽor絶対ﾊﾟｽ
@@ -955,11 +1005,28 @@ window.onload = function(){
 	}
 	
 	function keyUp(e) {
+		console.log(e.keyCode);
 		if (e.keyCode === 78) {//n key
 			mode_type = 0;
 		}
 		if (e.keyCode === 70) {//f key
 			mode_type = 1;
+		}
+		if (e.keyCode === 38) {//UP key
+			mode_id += 1;
+			if (mode_id > num_mode - 1) {
+				mode_id = 0;
+			}
+			e.preventDefault();
+			eText.textContent = mode_id;
+		}
+		if (e.keyCode === 40) {//DOWN key
+			mode_id -= 1;
+			if (mode_id < 0) {
+				mode_id = num_mode -1;
+			}
+			e.preventDefault();
+			eText.textContent = mode_id;
 		}
 	}
 	

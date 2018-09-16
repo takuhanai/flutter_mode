@@ -9,8 +9,8 @@
         <script id="vs" type="x-shader/x-vertex">
 			attribute vec3  position;
 			attribute vec3  mode_amp;
-			attribute vec3  cmode_amp;
-			attribute vec3  cmode_phase;
+			attribute vec3  cmode_r;
+			attribute vec3  cmode_i;
 			uniform   vec4  color;
 			uniform   mat4  mvpMatrix;
 			uniform   float phase;
@@ -23,6 +23,8 @@
 				if (mode_type == 0) {
 					modeShape = position + mode_amp * amp * sin(phase);
 				} else if (mode_type == 1) {
+					vec3 cmode_amp = sqrt(cmode_r * cmode_r + cmode_i * cmode_i);
+					vec3 cmode_phase = atan(cmode_r, cmode_i);
 					modeShape = position + cmode_amp * amp * sin(phase + cmode_phase);
 				}
 				gl_Position    = mvpMatrix * vec4(modeShape, 1.0);
