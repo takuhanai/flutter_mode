@@ -952,10 +952,11 @@ window.onload = function(){
 		prevMouseLocation = getMouseLocation(e);
 		currentMouseLocation = prevMouseLocation;
 		if (prevMouseLocation.x > c.width * 0.9 && prevMouseLocation.y > c.height * 0.9) {
-			//toggleCameraAction();
-			//drawMode += 1;
-			//drawMode %= numDrawMode;
-			//drawUpdate();
+			if (mode_type === 0) {
+				mode_type = 1;
+			} else {
+				mode_type = 0;
+			}
 		}
 	}
 	
@@ -983,10 +984,11 @@ window.onload = function(){
 		currentTouchLocations = prevTouchLocations;
 		if (prevTouchLocations.length === 1) {
 			if (prevTouchLocations[0].x > c.width * 0.9 && prevTouchLocations[0].y > c.height * 0.9) {
-				//toggleCameraAction();
-				//drawMode += 1;
-				//drawMode %= numDrawMode;
-				//drawUpdate();
+				if (mode_type === 0) {
+					mode_type = 1;
+				} else {
+					mode_type = 0;
+				}
 			}
 		}
 		e.preventDefault();
