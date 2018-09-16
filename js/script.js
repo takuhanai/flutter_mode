@@ -113,6 +113,8 @@ window.onload = function(){
 	let freqs = [];
 	let mode_id = 11;
 	
+	let wire_color = [[0.3, 1.0, 0.3, 1.0], [1.0, 0.3, 0.3, 1.0]];
+	
 	readFlutterData();
 	//console.log(coord);
 	
@@ -296,7 +298,7 @@ window.onload = function(){
 		let attOffset = [0.0, 4 * 3 * num_vert * mode_id, 4 * 3 * num_vert * mode_id, 4 * 3 * num_vert * mode_id];
 		set_attribute(VBOList, attLocation, attStride, attOffset);
 		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, iIndex);
-		gl.uniform4fv(uniLocation[0], [0.0, 1.0, 0.0, 1.0]); //color
+		gl.uniform4fv(uniLocation[0], wire_color[mode_type]); //color
 		gl.uniformMatrix4fv(uniLocation[1], false, mvpMatrix); //MVPMatrix
 		gl.uniform1f(uniLocation[2], phase); //phase
 		gl.uniform1f(uniLocation[3], 5000.0); //amp
