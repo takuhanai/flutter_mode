@@ -9,7 +9,7 @@ body {margin:0;
 	font-size: 30px;
 	/*font-family: 'Paytone One', sans-serif;*/
 	font-family: 'Play', sans-serif;
-	text-decoration: none
+	text-decoration: none;
 }
 
 /* ナビゲーションメニュー */
@@ -61,7 +61,7 @@ body {margin:0;
 .news li {
 	display: block;
 	padding:5px;
-	border-bottom: dotted 2px #dddddd;
+	/*border-bottom: dotted 2px #dddddd;*/
 	color: #000000;
 	font-size: 14px;
 	text-decoration: none
@@ -76,6 +76,7 @@ body {margin:0;
 	font-size: 14px
 }
 /* グリッド */
+
 body {
 	display: grid;
 	grid-template-columns:
@@ -128,3 +129,4 @@ body {
 	grid-column-start: main;
 	grid-row-start: foot;
 }
+
