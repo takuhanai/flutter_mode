@@ -21,7 +21,8 @@ window.onload = function(){
 	let mousePressed = false;
 	let prevMouseLocation;
 	let currentMouseLocation;
-	let wheelDelta = 0.00005;
+	//let wheelDelta = 0.00005;
+	let wheelDelta = 0.003;
 	
 	let touched = false;
 	let prevTouchLocations;
@@ -32,8 +33,9 @@ window.onload = function(){
 	let cameraVertAngle = 0.0;
 	const cameraVertAngleMax = 0.0 * Math.PI / 180.0;
 	const cameraVertAngleMin = -90.0 * Math.PI / 180.0;
-	const cameraViewAngleMax = 1.2;
-	const cameraViewAngleMin = 0.1;
+	let cameraViewAngle = 40.0;
+	const cameraViewAngleMax = 45.0;
+	const cameraViewAngleMin = 20.0;
 	
 	let cameraOriginZSpeed;
 	let cameraOriginZDest;
@@ -44,7 +46,8 @@ window.onload = function(){
 		browser = 'Chrome';
 	} else if (navigator.userAgent.indexOf('Firefox') != -1) {
 		browser = 'Firefox';
-		wheelDelta = 0.005;
+		//wheelDelta = 0.005;
+		wheelDelta = 0.3;
 	} else if (navigator.userAgent.indexOf('Safari') != -1) {
 		browser = 'Safari';
 	}
@@ -96,7 +99,7 @@ window.onload = function(){
 	//m.ortho(-0.5 * c.width, 0.5 * c.width, 0.5 * c.height, -0.5 * c.height, 0.01, 5000, pMatrix);
 	//m.rotate(vMatrix, 0.5 * Math.PI, [1.0, 0.0, 0.0], vMatrix)
 	//m.ortho(-850, 850, 850 * c.height / c.width, -850 * c.height / c.width, 0.01, 5000, pMatrix);
-	m.perspective(40.0, c.width / c.height, 0.01, 5000.0, pMatrix);
+	m.perspective(cameraViewAngle, c.width / c.height, 0.01, 5000.0, pMatrix);
 	
 	m.translate(mMatrix, [-759.0, 0.0, 0.0], mMatrix);
 	//m.multiply(pMatrix, vMatrix, mvpMatrix);
@@ -213,10 +216,10 @@ window.onload = function(){
 				let pt1 = prevTouchLocations[1];
 				let prevDist = Math.sqrt((pt1.x - pt0.x) * (pt1.x - pt0.x) + (pt1.y - pt0.y) * (pt1.y - pt0.y));
 				
-				let ay = objects[obCamera[camMode]].angle_y;
+				let ay = cameraViewAngle;
 				ay -= 0.001 * (currentDist - prevDist);
 				if (ay < cameraViewAngleMax && ay > cameraViewAngleMin) {
-					objects[obCamera[camMode]].angle_y = ay;
+					cameraViewAngle = ay;
 				}
 				prevTouchLocations = currentTouchLocations;
 			}
@@ -291,6 +294,7 @@ window.onload = function(){
     }
 
     function objectRender(){
+		m.perspective(cameraViewAngle, c.width / c.height, 0.01, 5000.0, pMatrix);
 		m.multiply(pMatrix, vMatrix, mvpMatrix);
 		m.multiply(mvpMatrix, cvMatrix, mvpMatrix);
 		m.multiply(mvpMatrix, mMatrix, mvpMatrix);
@@ -972,10 +976,10 @@ window.onload = function(){
 	
 	function wheel(e) {
 		//wheelDelta = e.deltaY;
-		let ay = objects[obCamera[camMode]].angle_y;
+		let ay = cameraViewAngle;
 		ay += wheelDelta * e.deltaY;
 		if (ay < cameraViewAngleMax && ay > cameraViewAngleMin) {
-			objects[obCamera[camMode]].angle_y = ay;
+			cameraViewAngle = ay;
 		}
 		//eText.textContent = ay;
 	}
