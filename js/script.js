@@ -217,7 +217,8 @@ window.onload = function(){
 				let prevDist = Math.sqrt((pt1.x - pt0.x) * (pt1.x - pt0.x) + (pt1.y - pt0.y) * (pt1.y - pt0.y));
 				
 				let ay = cameraViewAngle;
-				ay -= 0.001 * (currentDist - prevDist);
+				//ay -= 0.001 * (currentDist - prevDist);
+				ay -= 0.06 * (currentDist - prevDist);
 				if (ay < cameraViewAngleMax && ay > cameraViewAngleMin) {
 					cameraViewAngle = ay;
 				}
