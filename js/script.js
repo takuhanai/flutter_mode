@@ -8,6 +8,8 @@ window.onload = function(){
 	let phase = 0.0;
 	let mode_type = 0;
 	
+	let bridge_id = 1;
+	
 	let ftn13_read = false;
 	let ftn82_read = false;
 	let ftn83_read = false;
@@ -28,7 +30,7 @@ window.onload = function(){
 	let prevTouchLocations;
 	let currentTouchLocations;
 	
-	let allDataReady = false;
+	let allDataReady = true;
 	
 	let cameraVertAngle = 0.0;
 	const cameraVertAngleMax = 0.0 * Math.PI / 180.0;
@@ -99,13 +101,58 @@ window.onload = function(){
 	//m.ortho(-0.5 * c.width, 0.5 * c.width, 0.5 * c.height, -0.5 * c.height, 0.01, 5000, pMatrix);
 	//m.rotate(vMatrix, 0.5 * Math.PI, [1.0, 0.0, 0.0], vMatrix)
 	//m.ortho(-850, 850, 850 * c.height / c.width, -850 * c.height / c.width, 0.01, 5000, pMatrix);
-	m.perspective(cameraViewAngle, c.width / c.height, 0.01, 5000.0, pMatrix);
+	//m.perspective(cameraViewAngle, c.width / c.height, 0.01, 5000.0, pMatrix);
 	
-	m.translate(mMatrix, [-759.0, 0.0, 0.0], mMatrix);
+	//m.translate(mMatrix, [0.0, 0.0, 0.0], mMatrix); // shift for Shimotsui
+	//m.translate(mMatrix, [-759.0, 0.0, 0.0], mMatrix); // shift for Kitabisan
+	//m.translate(mMatrix, [-814.0, 0.0, 0.0], mMatrix); // shift for Kitabisan
 	//m.multiply(pMatrix, vMatrix, mvpMatrix);
 	//m.multiply(mvpMatrix, mMatrix, mvpMatrix);
 
 	let q = new qtnIV();
+	
+	const bridge_props = [
+						  {name: 'shimotsui',
+						  x_shift: 0.0,
+						  flutter_mode: 10,
+						  suspenders: [[1600, 1699], [2600, 2699]]},
+						  {name: 'kitabisan',
+						  x_shift: -759.0,
+						  flutter_mode: 11,
+						  suspenders: [[1600, 1999]]},
+						  {name: 'minamibisan',
+						  x_shift: -814.0,
+						  flutter_mode: 11,
+						  suspenders: [[3000, 4999]]}
+						 ];
+	
+	let bridges = new Array();
+	let Bridge = function(name) {
+		this.name = name;
+		this.coord = new Array();
+		this.index = new Array();
+		this.mode = new Array();
+		this.cmode_r = new Array();
+		this.cmode_i = new Array();
+		this.freqs = [];
+		//this.VBOList = [];
+		this.ftn13_read = false;
+		this.ftn82_read = false;
+		this.ftn83_read = false;
+		this.ready = false;
+	}
+	
+	for (let i = 0; i < bridge_props.length; i++) {
+		let bp = bridge_props[i];
+		let br = new Bridge(bp.name);
+		br.x_shift = bp.x_shift;
+		br.flutter_mode = bp.flutter_mode;
+		br.mode_id = bp.flutter_mode;
+		br.suspenders = bp.suspenders;
+		bridges[i] = br;
+		readFlutterData(br);
+	}
+	console.log(bridges[bridge_id].name);
 	
 	let num_loop;
 	let VBOList;
@@ -114,11 +161,12 @@ window.onload = function(){
 	let num_vert;
 	let num_mode;
 	let freqs = [];
-	let mode_id = 11;
+	let mode_id = 10;//Shimotsui
+	//let mode_id = 11;//Kitabisan and Minamibisan
 	
 	let wire_color = [[0.3, 1.0, 0.3, 1.0], [1.0, 0.3, 0.3, 1.0]];
 	
-	readFlutterData();
+	//readFlutterData();
 	//console.log(coord);
 	
 	window.addEventListener('keyup', keyUp, false);
@@ -139,6 +187,7 @@ window.onload = function(){
 	
     function render(){
 		//console.log(ftn13_read, ftn82_read, ftn83_read);
+		/*
 		if (ftn13_read && ftn82_read && ftn83_read && !allDataReady) {
 			console.log(coord.length, mode.length, cmode_r.length, cmode_i.length);
 			allDataReady = true;
@@ -146,15 +195,17 @@ window.onload = function(){
 			
 			iIndex = create_ibo(index);
 		}
+		 */
 		//phase += freqs[mode_id] / 60.0 * 2.0 * Math.PI;
 		gl.clearColor(0.0, 0.0, 0.0, 1.0);
 		gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 		// アニメーション
         requestAnimationFrame(render);
 
-        if (allDataReady === true) {
+        //if (allDataReady === true) {
+		if (bridges[bridge_id].ready) {
 			// 全てのリソースのロードが完了している
-			phase += freqs[mode_id] / 60.0 * 2.0 * Math.PI;
+			phase += bridges[bridge_id].freqs[bridges[bridge_id].mode_id] / 60.0 * 2.0 * Math.PI;
 			
 			//drawUpdate();
 			
@@ -296,19 +347,22 @@ window.onload = function(){
 
     function objectRender(){
 		m.perspective(cameraViewAngle, c.width / c.height, 0.01, 5000.0, pMatrix);
+		mMatrix = m.identity(m.create());
+		m.translate(mMatrix, [bridges[bridge_id].x_shift, 0.0, 0.0], mMatrix);
 		m.multiply(pMatrix, vMatrix, mvpMatrix);
 		m.multiply(mvpMatrix, cvMatrix, mvpMatrix);
 		m.multiply(mvpMatrix, mMatrix, mvpMatrix);
 		
-		let attOffset = [0.0, 4 * 3 * num_vert * mode_id, 4 * 3 * num_vert * mode_id, 4 * 3 * num_vert * mode_id];
-		set_attribute(VBOList, attLocation, attStride, attOffset);
-		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, iIndex);
+		//let attOffset = [0.0, 4 * 3 * num_vert * mode_id, 4 * 3 * num_vert * mode_id, 4 * 3 * num_vert * mode_id];
+		let attOffset = [0.0, 4 * 3 * bridges[bridge_id].num_vert * bridges[bridge_id].mode_id, 4 * 3 * bridges[bridge_id].num_vert * bridges[bridge_id].mode_id, 4 * 3 * bridges[bridge_id].num_vert * bridges[bridge_id].mode_id];
+		set_attribute(bridges[bridge_id].VBOList, attLocation, attStride, attOffset);
+		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, bridges[bridge_id].iIndex);
 		gl.uniform4fv(uniLocation[0], wire_color[mode_type]); //color
 		gl.uniformMatrix4fv(uniLocation[1], false, mvpMatrix); //MVPMatrix
 		gl.uniform1f(uniLocation[2], phase); //phase
 		gl.uniform1f(uniLocation[3], 5000.0); //amp
 		gl.uniform1i(uniLocation[4], mode_type); //mode type, 0: natural, 1: flutter
-		gl.drawElements(gl.LINES, num_loop, gl.UNSIGNED_SHORT, 0);
+		gl.drawElements(gl.LINES, bridges[bridge_id].num_loop, gl.UNSIGNED_SHORT, 0);
     }
 
     // プログレス表示
@@ -487,7 +541,145 @@ window.onload = function(){
 		console.log(i_source);
 	}
 	
-	function readFlutterData() {
+	function readFlutterData(bridge) {
+		
+		let Vert = function () {
+			this.id;
+		}
+		let verts = new Array(); // coordinate of each vertex
+		
+		let ftn13 = new XMLHttpRequest();
+		ftn13.open("GET", './resource/ftn13_' + bridge.name, true); //true:非同期,false:同期
+		ftn13.responseType = 'arraybuffer';
+		ftn13.send(null);
+		
+		ftn13.onload = function(e) {
+			let arrayBuffer = ftn13.response;
+			let dv13 = new DataView(arrayBuffer);
+			let off = 0;
+			bridge.num_vert = dv13.getInt32(off + 8, true);
+			console.log(bridge.num_vert);
+			off += 60;
+			for (let i = 0; i < bridge.num_vert; i++) {
+				let v = new Vert();
+				v.id = i;
+				bridge.coord.push(dv13.getFloat64(off + 4, true));
+				bridge.coord.push(dv13.getFloat64(off + 12, true));
+				bridge.coord.push(dv13.getFloat64(off + 20, true));
+				verts[dv13.getInt32(off, true)] = v;
+				off += 88;
+			}
+			let num_memb = dv13.getInt32(off + 4, true);
+			console.log(num_memb);
+			off += 16
+			bridge.num_loop = 0;
+			for (let i = 0; i < num_memb; i++) {
+				let elm = dv13.getInt32(off, true);
+				let draw_elm = true;
+				for (let ii = 0; ii < bridge.suspenders.length; ii++) {
+					if (elm >= bridge.suspenders[ii][0] && elm <= bridge.suspenders[ii][1]) {
+						draw_elm = false;
+					}
+				}
+				if (draw_elm) {
+					bridge.index.push(verts[dv13.getInt32(off + 8, true)].id);
+					bridge.index.push(verts[dv13.getInt32(off + 12, true)].id);
+					bridge.num_loop += 2;
+				}
+				off += 28;
+			}
+			
+			bridge.num_mode = dv13.getInt32(off + 8, true);
+			off += 60;
+			
+			for (let i = 0; i < bridge.num_mode; i++) {
+				bridge.freqs.push(dv13.getFloat64(off + 4, true));
+				off += 84;
+				for (let ii = 0; ii < bridge.num_vert; ii++) {
+					bridge.mode.push(dv13.getFloat64(off + 4, true));
+					bridge.mode.push(dv13.getFloat64(off + 12, true));
+					bridge.mode.push(dv13.getFloat64(off + 20, true));
+					off += 60;
+				}
+			}
+			bridge.ftn13_read = true;
+			completeReading(bridge);
+		}
+		
+		let ftn82 = new XMLHttpRequest();
+		ftn82.open("GET", './resource/ftn82_' + bridge.name, true);
+		ftn82.responseType = 'arraybuffer';
+		ftn82.send(null);
+		
+		ftn82.onload = function(e) {
+			let arrayBuffer = ftn82.response;
+			let dv82 = new DataView(arrayBuffer);
+			
+			let off = 0;
+			let n_v = dv82.getInt32(off + 8, true);
+			off += 60 + 84 * n_v;
+			let n_m = dv82.getInt32(off + 4, true);
+			off += 16 + 28 * n_m;
+			let n_mo = dv82.getInt32(off + 8, true);
+			off += 60;
+			
+			for (let i = 0; i < n_mo; i++) {
+				off += 76;
+				for (let ii = 0; ii < n_v; ii++) {
+					bridge.cmode_r.push(dv82.getFloat64(off + 4, true));
+					bridge.cmode_r.push(dv82.getFloat64(off + 12, true));
+					bridge.cmode_r.push(dv82.getFloat64(off + 20, true));
+					off += 60;
+				}
+			}
+			bridge.ftn82_read = true;
+			completeReading(bridge);
+		}
+		
+		let ftn83 = new XMLHttpRequest();
+		ftn83.open("GET", './resource/ftn83_' + bridge.name, true);
+		ftn83.responseType = 'arraybuffer';
+		ftn83.send(null);
+		
+		ftn83.onload = function(e) {
+			let arrayBuffer = ftn83.response;
+			let dv83 = new DataView(arrayBuffer);
+			
+			let off = 0;
+			let n_v = dv83.getInt32(off + 8, true);
+			off += 60 + 84 * n_v;
+			let n_m = dv83.getInt32(off + 4, true);
+			off += 16 + 28 * n_m;
+			let n_mo = dv83.getInt32(off + 8, true);
+			off += 60;
+			
+			for (let i = 0; i < n_mo; i++) {
+				off += 76;
+				for (let ii = 0; ii < n_v; ii++) {
+					bridge.cmode_i.push(dv83.getFloat64(off + 4, true));
+					bridge.cmode_i.push(dv83.getFloat64(off + 12, true));
+					bridge.cmode_i.push(dv83.getFloat64(off + 20, true));
+					off += 60;
+				}
+			}
+			bridge.ftn83_read = true;
+			completeReading(bridge);
+		}
+	}
+	
+	function completeReading(bridge) {
+		if (bridge.ftn13_read && bridge.ftn82_read && bridge.ftn83_read) {
+			//bridge.VBOList.push(create_vbo(bridge.coord), create_vbo(bridge.mode));
+			bridge.VBOList = [create_vbo(bridge.coord), create_vbo(bridge.mode), create_vbo(bridge.cmode_r), create_vbo(bridge.cmode_i)];
+			bridge.iIndex = create_ibo(bridge.index);
+			bridge.ready = true;
+			//console.log(bridge.freqs[bridge.mode_id]);
+			console.log('complete reading_' + bridge.name);
+			//console.log(bridge);
+		}
+	}
+	
+	function readFlutterData_old() {
 		
 		let Vert = function () {
 			this.id;
@@ -521,7 +713,9 @@ window.onload = function(){
 			num_loop = 0;
 			for (let i = 0; i < num_memb; i++) {
 				let elm = dv13.getInt32(off, true);
-				if (elm < 1600 || elm > 1999) { // remove suspender ropes (kitabisan)
+				if (Math.floor(elm / 100) != 16 && Math.floor(elm / 100) != 26) { // remove suspender ropes (shimotsui)
+				//if (elm < 1600 || elm > 1999) { // remove suspender ropes (kitabisan)
+				//if (elm < 3000 || elm > 4999) { // remove suspender ropes (minamibisan)
 					index.push(verts[dv13.getInt32(off + 8, true)].id);
 					index.push(verts[dv13.getInt32(off + 12, true)].id);
 					num_loop += 2;
@@ -982,6 +1176,7 @@ window.onload = function(){
 		if (ay < cameraViewAngleMax && ay > cameraViewAngleMin) {
 			cameraViewAngle = ay;
 		}
+		e.preventDefault();
 		//eText.textContent = ay;
 	}
 	
@@ -996,6 +1191,28 @@ window.onload = function(){
 				} else {
 					mode_type = 0;
 				}
+			}
+			if (prevTouchLocations[0].x > c.width * 0.9 && prevTouchLocations[0].y < c.height * 0.1) {
+				bridge_id += 1;
+				if (bridge_id > 2) {
+					bridge_id = 0;
+				}
+			}
+			if (prevTouchLocations[0].x < c.width * 0.1 && prevTouchLocations[0].y < c.height * 0.1) {
+				bridges[bridge_id].mode_id += 1;
+				if (bridges[bridge_id].mode_id > bridges[bridge_id].num_mode - 1) {
+					bridges[bridge_id].mode_id = 0;
+				}
+				e.preventDefault();
+				eText.textContent = bridges[bridge_id].mode_id;
+			}
+			if (prevTouchLocations[0].x < c.width * 0.1 && prevTouchLocations[0].y > c.height * 0.9) {
+				bridges[bridge_id].mode_id -= 1;
+				if (bridges[bridge_id].mode_id < 0) {
+					bridges[bridge_id].mode_id = bridges[bridge_id].num_mode -1;
+				}
+				e.preventDefault();
+				eText.textContent = bridges[bridge_id].mode_id;
 			}
 		}
 		e.preventDefault();
@@ -1021,21 +1238,27 @@ window.onload = function(){
 		if (e.keyCode === 70) {//f key
 			mode_type = 1;
 		}
+		if (e.keyCode === 66) {//b key
+			bridge_id += 1;
+			if (bridge_id > 2) {
+				bridge_id = 0;
+			}
+		}
 		if (e.keyCode === 38) {//UP key
-			mode_id += 1;
-			if (mode_id > num_mode - 1) {
-				mode_id = 0;
+			bridges[bridge_id].mode_id += 1;
+			if (bridges[bridge_id].mode_id > bridges[bridge_id].num_mode - 1) {
+				bridges[bridge_id].mode_id = 0;
 			}
 			e.preventDefault();
-			eText.textContent = mode_id;
+			eText.textContent = bridges[bridge_id].mode_id;
 		}
 		if (e.keyCode === 40) {//DOWN key
-			mode_id -= 1;
-			if (mode_id < 0) {
-				mode_id = num_mode -1;
+			bridges[bridge_id].mode_id -= 1;
+			if (bridges[bridge_id].mode_id < 0) {
+				bridges[bridge_id].mode_id = bridges[bridge_id].num_mode -1;
 			}
 			e.preventDefault();
-			eText.textContent = mode_id;
+			eText.textContent = bridges[bridge_id].mode_id;
 		}
 	}
 	
