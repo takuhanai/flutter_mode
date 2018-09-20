@@ -42,7 +42,7 @@ body {margin:0;
 .news {
 	padding: 20px;
 	border: solid 6px #dddddd;
-	margin-bottom: 10px
+	/*margin-bottom: 10px*/
 }
 
 .news h2 {
@@ -69,6 +69,12 @@ body {margin:0;
 
 .news li a:hover {background-color: #eeeeee}
 
+.footnote {
+	margin-left:50px;
+	font-size: 14px;
+	color: #666666;
+}
+
 /* コピーライト */
 .copyright {
 	margin: 0;
@@ -82,7 +88,7 @@ body {
 	grid-template-columns:
 	[left] minmax(20px, 1fr) [main] minmax(auto, 900px) [main-end] minmax(20px, 1fr) [right];
 	grid-template-rows:
-	[head] auto [img] auto [news] auto [service_title] auto [service] auto [foot] auto [bottom]
+	[head] auto [img] auto [news] auto [service_title] auto [service] auto [note] auto [foot] auto [bottom]
 }
 
 .hbar {
@@ -117,6 +123,11 @@ body {
 .contents {
 	grid-column-start: main;
 	grid-row-start: news
+}
+
+.footnote {
+	grid-column-start: main;
+	grid-row-start: note;
 }
 
 .copyright {

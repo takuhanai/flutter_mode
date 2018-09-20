@@ -5,8 +5,9 @@ window.onload = function(){
     // variables
 	let eText = document.getElementById('text');
 	
-	let phase = 0.0;
-	let mode_type = 0;
+	//let phase = 0.0;
+	let draw_mode = 0; //0: one bridge, 1: three bridges
+	let mode_type = 0; //0: normal mode, 1: complex mode
 	
 	let bridge_id = 1;
 	
@@ -114,14 +115,17 @@ window.onload = function(){
 	const bridge_props = [
 						  {name: 'shimotsui',
 						  x_shift: 0.0,
+						  y_shift: 300.0,
 						  flutter_mode: 10,
 						  suspenders: [[1600, 1699], [2600, 2699]]},
 						  {name: 'kitabisan',
 						  x_shift: -759.0,
+						  y_shift: 0.0,
 						  flutter_mode: 11,
 						  suspenders: [[1600, 1999]]},
 						  {name: 'minamibisan',
 						  x_shift: -814.0,
+						  y_shift: -300.0,
 						  flutter_mode: 11,
 						  suspenders: [[3000, 4999]]}
 						 ];
@@ -135,7 +139,7 @@ window.onload = function(){
 		this.cmode_r = new Array();
 		this.cmode_i = new Array();
 		this.freqs = [];
-		//this.VBOList = [];
+		this.phase = 0.0;
 		this.ftn13_read = false;
 		this.ftn82_read = false;
 		this.ftn83_read = false;
@@ -146,6 +150,7 @@ window.onload = function(){
 		let bp = bridge_props[i];
 		let br = new Bridge(bp.name);
 		br.x_shift = bp.x_shift;
+		br.y_shift = bp.y_shift;
 		br.flutter_mode = bp.flutter_mode;
 		br.mode_id = bp.flutter_mode;
 		br.suspenders = bp.suspenders;
@@ -186,59 +191,35 @@ window.onload = function(){
 	render();
 	
     function render(){
-		//console.log(ftn13_read, ftn82_read, ftn83_read);
-		/*
-		if (ftn13_read && ftn82_read && ftn83_read && !allDataReady) {
-			console.log(coord.length, mode.length, cmode_r.length, cmode_i.length);
-			allDataReady = true;
-			VBOList = [create_vbo(coord), create_vbo(mode), create_vbo(cmode_r), create_vbo(cmode_i)];
-			
-			iIndex = create_ibo(index);
-		}
-		 */
-		//phase += freqs[mode_id] / 60.0 * 2.0 * Math.PI;
 		gl.clearColor(0.0, 0.0, 0.0, 1.0);
 		gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 		// アニメーション
         requestAnimationFrame(render);
 
-        //if (allDataReady === true) {
-		if (bridges[bridge_id].ready) {
-			// 全てのリソースのロードが完了している
-			phase += bridges[bridge_id].freqs[bridges[bridge_id].mode_id] / 60.0 * 2.0 * Math.PI;
-			
-			//drawUpdate();
-			
-			if (supportTouch) {
-				touchUpdate();
-			} else {
-				mouseUpdate();
-			}
-			
-            gl.enable(gl.DEPTH_TEST);
-			//gl.enable(gl.CULL_FACE);
-			//gl.enable(gl.BLEND);
-			//gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-			
-			//cameraUpdate();
-			
-			// canvasを初期化
-            //gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-            //gl.viewport(0, 0, c.width, c.height);
-            //gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-            // objects の描画
-            objectRender();
-			
-        }else{
-            // canvasを初期化
-            //gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
-            // リソースのロードが完了していない
-            // プログレス表示
-            //m.multiply(p1Matrix, vMatrix, vpMatrix);
-            //progressRender();
+		if (supportTouch) {
+			touchUpdate();
+		} else {
+			mouseUpdate();
+		}
+		
+		switch (draw_mode) {
+			case 0:
+				bridgeRender(bridges[bridge_id]);
+				break;
+			case 1:
+				for (let i = 0; i < 3; i++) {
+					bridgeRender(bridges[i]);
+				}
+				break;
+			default:
+				return;
+		}
+		
+		/*
+        if (bridges[bridge_id].ready) {
+            bridgeRender(bridges[bridge_id]);
         }
-
+		*/
         gl.flush();
     }
 	
@@ -345,24 +326,29 @@ window.onload = function(){
         m.multiply(_obCamera.pMatrix, vMatrix, vpMatrix);
     }
 
-    function objectRender(){
-		m.perspective(cameraViewAngle, c.width / c.height, 0.01, 5000.0, pMatrix);
-		mMatrix = m.identity(m.create());
-		m.translate(mMatrix, [bridges[bridge_id].x_shift, 0.0, 0.0], mMatrix);
-		m.multiply(pMatrix, vMatrix, mvpMatrix);
-		m.multiply(mvpMatrix, cvMatrix, mvpMatrix);
-		m.multiply(mvpMatrix, mMatrix, mvpMatrix);
-		
-		//let attOffset = [0.0, 4 * 3 * num_vert * mode_id, 4 * 3 * num_vert * mode_id, 4 * 3 * num_vert * mode_id];
-		let attOffset = [0.0, 4 * 3 * bridges[bridge_id].num_vert * bridges[bridge_id].mode_id, 4 * 3 * bridges[bridge_id].num_vert * bridges[bridge_id].mode_id, 4 * 3 * bridges[bridge_id].num_vert * bridges[bridge_id].mode_id];
-		set_attribute(bridges[bridge_id].VBOList, attLocation, attStride, attOffset);
-		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, bridges[bridge_id].iIndex);
-		gl.uniform4fv(uniLocation[0], wire_color[mode_type]); //color
-		gl.uniformMatrix4fv(uniLocation[1], false, mvpMatrix); //MVPMatrix
-		gl.uniform1f(uniLocation[2], phase); //phase
-		gl.uniform1f(uniLocation[3], 5000.0); //amp
-		gl.uniform1i(uniLocation[4], mode_type); //mode type, 0: natural, 1: flutter
-		gl.drawElements(gl.LINES, bridges[bridge_id].num_loop, gl.UNSIGNED_SHORT, 0);
+    function bridgeRender(br){
+		if (br.ready) {
+			br.phase += br.freqs[br.mode_id] / 60.0 * 2.0 * Math.PI;
+			m.perspective(cameraViewAngle, c.width / c.height, 0.01, 5000.0, pMatrix);
+			mMatrix = m.identity(m.create());
+			m.translate(mMatrix, [br.x_shift, 0.0, 0.0], mMatrix);
+			if (draw_mode === 1) {
+				m.translate(mMatrix, [0.0, br.y_shift, 0.0], mMatrix);
+			}
+			m.multiply(pMatrix, vMatrix, mvpMatrix);
+			m.multiply(mvpMatrix, cvMatrix, mvpMatrix);
+			m.multiply(mvpMatrix, mMatrix, mvpMatrix);
+			
+			let attOffset = [0.0, 4 * 3 * br.num_vert * br.mode_id, 4 * 3 * br.num_vert * br.mode_id, 4 * 3 * br.num_vert * br.mode_id];
+			set_attribute(br.VBOList, attLocation, attStride, attOffset);
+			gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, br.iIndex);
+			gl.uniform4fv(uniLocation[0], wire_color[mode_type]); //color
+			gl.uniformMatrix4fv(uniLocation[1], false, mvpMatrix); //MVPMatrix
+			gl.uniform1f(uniLocation[2], br.phase); //phase
+			gl.uniform1f(uniLocation[3], 5000.0); //amp
+			gl.uniform1i(uniLocation[4], mode_type); //mode type, 0: natural, 1: flutter
+			gl.drawElements(gl.LINES, br.num_loop, gl.UNSIGNED_SHORT, 0);
+		}
     }
 
     // プログレス表示
@@ -1193,26 +1179,28 @@ window.onload = function(){
 				}
 			}
 			if (prevTouchLocations[0].x > c.width * 0.9 && prevTouchLocations[0].y < c.height * 0.1) {
-				bridge_id += 1;
-				if (bridge_id > 2) {
-					bridge_id = 0;
+				if (draw_mode === 0) {
+					bridge_id += 1;
+					if (bridge_id > 2) {
+						bridge_id = 0;
+					}
 				}
 			}
 			if (prevTouchLocations[0].x < c.width * 0.1 && prevTouchLocations[0].y < c.height * 0.1) {
-				bridges[bridge_id].mode_id += 1;
-				if (bridges[bridge_id].mode_id > bridges[bridge_id].num_mode - 1) {
-					bridges[bridge_id].mode_id = 0;
+				draw_mode += 1;
+				if (draw_mode > 1) {
+					draw_mode = 0;
 				}
-				e.preventDefault();
-				eText.textContent = bridges[bridge_id].mode_id;
 			}
 			if (prevTouchLocations[0].x < c.width * 0.1 && prevTouchLocations[0].y > c.height * 0.9) {
-				bridges[bridge_id].mode_id -= 1;
-				if (bridges[bridge_id].mode_id < 0) {
-					bridges[bridge_id].mode_id = bridges[bridge_id].num_mode -1;
+				if (draw_mode === 0) {
+					bridges[bridge_id].mode_id += 1;
+					if (bridges[bridge_id].mode_id > bridges[bridge_id].num_mode - 1) {
+						bridges[bridge_id].mode_id = 0;
+					}
+					e.preventDefault();
+					eText.textContent = bridges[bridge_id].mode_id;
 				}
-				e.preventDefault();
-				eText.textContent = bridges[bridge_id].mode_id;
 			}
 		}
 		e.preventDefault();
@@ -1232,33 +1220,46 @@ window.onload = function(){
 	
 	function keyUp(e) {
 		console.log(e.keyCode);
-		if (e.keyCode === 78) {//n key
+		if (e.keyCode === 78) {//N key
 			mode_type = 0;
 		}
-		if (e.keyCode === 70) {//f key
+		if (e.keyCode === 70) {//F key
 			mode_type = 1;
 		}
-		if (e.keyCode === 66) {//b key
-			bridge_id += 1;
-			if (bridge_id > 2) {
-				bridge_id = 0;
+		
+		if (e.keyCode === 68 && e.shiftKey) {//D key
+			draw_mode += 1;
+			if (draw_mode > 1) {
+				draw_mode = 0;
 			}
 		}
-		if (e.keyCode === 38) {//UP key
-			bridges[bridge_id].mode_id += 1;
-			if (bridges[bridge_id].mode_id > bridges[bridge_id].num_mode - 1) {
-				bridges[bridge_id].mode_id = 0;
+		if (e.keyCode === 66 && e.shiftKey) {//B key
+			if (draw_mode === 0) {
+				bridge_id += 1;
+				if (bridge_id > 2) {
+					bridge_id = 0;
+				}
 			}
-			e.preventDefault();
-			eText.textContent = bridges[bridge_id].mode_id;
 		}
-		if (e.keyCode === 40) {//DOWN key
-			bridges[bridge_id].mode_id -= 1;
-			if (bridges[bridge_id].mode_id < 0) {
-				bridges[bridge_id].mode_id = bridges[bridge_id].num_mode -1;
+		if (e.keyCode === 38 && e.shiftKey) {//UP key
+			if (draw_mode === 0) {
+				bridges[bridge_id].mode_id += 1;
+				if (bridges[bridge_id].mode_id > bridges[bridge_id].num_mode - 1) {
+					bridges[bridge_id].mode_id = 0;
+				}
+				e.preventDefault();
+				eText.textContent = bridges[bridge_id].mode_id;
 			}
-			e.preventDefault();
-			eText.textContent = bridges[bridge_id].mode_id;
+		}
+		if (e.keyCode === 40 && e.shiftKey) {//DOWN key
+			if (draw_mode === 0) {
+				bridges[bridge_id].mode_id -= 1;
+				if (bridges[bridge_id].mode_id < 0) {
+					bridges[bridge_id].mode_id = bridges[bridge_id].num_mode -1;
+				}
+				e.preventDefault();
+				eText.textContent = bridges[bridge_id].mode_id;
+			}
 		}
 	}
 	
