@@ -88,51 +88,51 @@ body {
     -ms-grid-columns: 1fr 900px 1fr
 }
 .hbar {
-    -ms-grid-column: 1
-    -ms-grid-column-span: 3
-    -ms-grid-row: 1
+    -ms-grid-column: 1;
+    -ms-grid-column-span: 3;
+    -ms-grid-row: 1;
     z-index: -1;
     border-bottom: solid 4px #dddddd
 }
 .site {
-    -ms-grid-column: 2
-    -ms-grid-row: 1
+    -ms-grid-column: 2;
+    -ms-grid-row: 1;
     justify-self: center;
 }
 .menu {
-    -ms-grid-column: 2
-    -ms-grid-row: 1
+    -ms-grid-column: 2;
+    -ms-grid-row: 1;
     justify-self: end;
     align-self: center
 }
 .webgl {
-    -ms-grid-column: 2
+    -ms-grid-column: 2;
     -ms-grid-row: 2
 }
 
 .news {
-    -ms-grid-column: 2
+    -ms-grid-column: 2;
     -ms-grid-row: 3
 }
 
 .contents {
-    -ms-grid-column: 2
+    -ms-grid-column: 2;
     -ms-grid-row: 3
 }
 
 .footnote {
-    -ms-grid-column: 2
+    -ms-grid-column: 2;
     -ms-grid-row: 6
 }
 
 .copyright {
-    -ms-grid-column: 2
-    -ms-grid-row: 7
+    -ms-grid-column: 2;
+    -ms-grid-row: 7;
     justify-self: center
 }
 
 .debugger {
-    -ms-grid-column: 2
+    -ms-grid-column: 2;
     -ms-grid-row: 7
 }
 
