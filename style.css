@@ -85,7 +85,7 @@ body {margin:0;
 /* 古い規格のグリッドの設定 */
 body {
     display:-ms-grid;
-    -ms-grid-columns: 1fr 900px 1fr
+    -ms-grid-columns: 1fr 1920px 1fr
 }
 .hbar {
     -ms-grid-column: 1;
