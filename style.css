@@ -142,7 +142,7 @@ body {
 body {
 	display: grid;
 	grid-template-columns:
-	[left] minmax(20px, 1fr) [main] minmax(auto, 900px) [main-end] minmax(20px, 1fr) [right];
+	[left] minmax(20px, 1fr) [main] minmax(auto, 1920px) [main-end] minmax(20px, 1fr) [right];
 	grid-template-rows:
 	[head] auto [img] auto [news] auto [service_title] auto [service] auto [note] auto [foot] auto [bottom]
 }
